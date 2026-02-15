@@ -12,6 +12,8 @@ await RunRetry429TestAsync();
 await RunNoRetry400TestAsync();
 await RunWsReconnectAndTerminalTestAsync();
 await RunWsCancelStopsWithoutInterruptTestAsync();
+await RunDownloadRedirectTestAsync();
+await RunSubmitAndHistoryMappingTestAsync();
 
 Console.WriteLine("ComfySdk.Tests: PASS");
 return 0;
@@ -164,6 +166,74 @@ static async Task RunWsCancelStopsWithoutInterruptTestAsync()
 
     Assert(events.Count > 0, "expected at least one event before cancellation");
     Assert(!events.Contains(RunEventType.Succeeded), "did not expect success terminal on canceled stream");
+}
+
+static async Task RunDownloadRedirectTestAsync()
+{
+    var redirected = new HttpResponseMessage(HttpStatusCode.Found);
+    redirected.Headers.Location = new Uri("/cdn/output.png", UriKind.Relative);
+
+    var final = new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new ByteArrayContent(new byte[] { 1, 2, 3, 4 }),
+    };
+
+    var handler = new SequenceHandler(redirected, final);
+    using var httpClient = new HttpClient(handler)
+    {
+        BaseAddress = new Uri("https://api.comfy.org"),
+    };
+
+    var options = new ComfyClientOptions
+    {
+        BaseUrl = new Uri("https://api.comfy.org"),
+    };
+
+    var transport = new ComfyHttpClient(httpClient, options, NullLogger<ComfyHttpClient>.Instance);
+    var client = new ComfyClient(options, transport, NullLogger<ComfyClient>.Instance);
+
+    var bytes = await client.DownloadAsync(new ViewParams("https://api.comfy.org/view?file=output.png"), "prompt-redirect");
+    Assert(handler.AttemptCount == 2, $"expected 2 download attempts (redirect+final), got {handler.AttemptCount}");
+    Assert(bytes.Length == 4, $"expected 4 bytes, got {bytes.Length}");
+}
+
+static async Task RunSubmitAndHistoryMappingTestAsync()
+{
+    var submit = new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new StringContent("{\"prompt_id\":\"prompt-123\"}"),
+    };
+
+    var history = new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new StringContent("{\"outputs\":[{\"name\":\"image_1\",\"type\":\"image\",\"url\":\"/view?filename=image_1.png\"}]}"),
+    };
+
+    var handler = new SequenceHandler(submit, history);
+    using var httpClient = new HttpClient(handler)
+    {
+        BaseAddress = new Uri("https://api.comfy.org"),
+    };
+
+    var options = new ComfyClientOptions
+    {
+        BaseUrl = new Uri("https://api.comfy.org"),
+        ApiPrefix = "/api",
+        RouteMap = new ComfySdk.Routing.RouteMap(
+            SubmitPrompt: "/prompt",
+            HistoryV2: "/history_v2"),
+    };
+
+    var transport = new ComfyHttpClient(httpClient, options, NullLogger<ComfyHttpClient>.Instance);
+    var client = new ComfyClient(options, transport, NullLogger<ComfyClient>.Instance);
+
+    var promptId = await client.SubmitAsync("{}", CancellationToken.None);
+    Assert(promptId == "prompt-123", $"expected promptId prompt-123, got {promptId}");
+
+    var outputs = await client.GetHistoryAsync(promptId, CancellationToken.None);
+    Assert(outputs.Count == 1, $"expected 1 output, got {outputs.Count}");
+    Assert(outputs[0].Type == "image", $"expected image type, got {outputs[0].Type}");
+    Assert(outputs[0].Url?.ToString().Contains("/view?filename=image_1.png", StringComparison.Ordinal) == true, "expected mapped output URL");
 }
 
 static void AssertDoesNotContain(string text, string forbidden, string message)

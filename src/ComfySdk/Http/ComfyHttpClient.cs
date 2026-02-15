@@ -112,6 +112,81 @@ public sealed class ComfyHttpClient
         }
     }
 
+    /// <summary>Sends GET request and follows redirect responses manually.</summary>
+    public async Task<HttpResponseMessage> GetWithRedirectsAsync(
+        Uri startUri,
+        string route,
+        string? promptId,
+        int maxRedirects = 5,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(startUri);
+
+        var current = startUri;
+        for (var redirect = 0; redirect <= maxRedirects; redirect++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, current);
+            using var timeoutCts = new CancellationTokenSource(GetTimeout(ComfyRequestKind.Download));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.SendAsync(request, linkedCts.Token);
+            }
+            catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new ComfyException("Download request timed out.", route, promptId: promptId, innerException: ex);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new ComfyException("Download request failed with network error.", route, promptId: promptId, innerException: ex);
+            }
+
+            if (IsRedirect(response.StatusCode) && response.Headers.Location is not null)
+            {
+                var target = response.Headers.Location.IsAbsoluteUri
+                    ? response.Headers.Location
+                    : new Uri(current, response.Headers.Location);
+                _logger.LogInformation(
+                    "Following redirect status={Status} route={Route} from={From} to={To} promptId={PromptId}",
+                    (int)response.StatusCode,
+                    route,
+                    current,
+                    target,
+                    promptId);
+                response.Dispose();
+                current = target;
+                continue;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var requestId = TryGetHeader(response.Headers, "x-request-id")
+                    ?? TryGetHeader(response.Headers, "request-id");
+                var snippet = await ReadBodySnippetAsync(response);
+                response.Dispose();
+                throw new ComfyException(
+                    message: $"Comfy download failed with HTTP {(int)response.StatusCode}.",
+                    route: route,
+                    httpStatus: (int)response.StatusCode,
+                    requestId: requestId,
+                    promptId: promptId,
+                    bodySnippet: snippet);
+            }
+
+            return response;
+        }
+
+        throw new ComfyException("Download redirect limit exceeded.", route, promptId: promptId);
+    }
+
+    private static bool IsRedirect(HttpStatusCode statusCode)
+    {
+        var code = (int)statusCode;
+        return code is 300 or 301 or 302 or 303 or 307 or 308;
+    }
+
     private static bool ShouldRetry(HttpStatusCode statusCode)
     {
         var code = (int)statusCode;

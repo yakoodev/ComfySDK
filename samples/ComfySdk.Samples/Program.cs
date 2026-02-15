@@ -1,6 +1,7 @@
 ﻿using ComfySdk;
 using ComfySdk.Auth;
 using ComfySdk.DependencyInjection;
+using ComfySdk.Models;
 using ComfySdk.Options;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +36,33 @@ static async Task RunScenarioAsync(string name, ComfyClient client)
         Console.WriteLine($"[{name}] {runEvent.Type}: {runEvent.Message}");
     }
 
-    var result = await client.RunAsync(new { Prompt = "cat" });
+    RunResult result;
+    try
+    {
+        result = await client.RunAsync(new { Prompt = "cat" });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[{name}] run skipped/failed in local sample: {ex.Message}");
+        return;
+    }
+
     Console.WriteLine($"[{name}] PromptId={result.PromptId}, outputs={result.Outputs.Count}");
+
+    var firstImage = result.Outputs.FirstOrDefault(o => o.Type == "image" && o.Url is not null);
+    if (firstImage is null)
+    {
+        Console.WriteLine($"[{name}] no image output to download");
+        return;
+    }
+
+    try
+    {
+        var bytes = await client.DownloadAsync(new ViewParams(firstImage.Url!.ToString()), result.PromptId);
+        Console.WriteLine($"[{name}] downloaded first image bytes={bytes.Length}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[{name}] download skipped/failed in local sample: {ex.Message}");
+    }
 }
