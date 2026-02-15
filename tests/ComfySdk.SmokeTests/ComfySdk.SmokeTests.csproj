@@ -1,8 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <AssemblyName>ComfySdk.SmokeTests</AssemblyName>
     <RootNamespace>ComfySdk.SmokeTests</RootNamespace>
-    <Description>Smoke test scaffolding for ComfySdk materialization pipeline.</Description>
+    <Description>Smoke tests for ComfySdk materialization pipeline.</Description>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 

@@ -6,8 +6,10 @@
     <LangVersion>latest</LangVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <VersionPrefix>0.1.0</VersionPrefix>
     <RepositoryUrl>https://github.com/Yakoo/ComfySDK</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Yakoo/ComfySDK</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Authors>ComfySdk Contributors</Authors>
     <Company>ComfySdk</Company>

@@ -3,9 +3,16 @@
     <AssemblyName>ComfySdk</AssemblyName>
     <RootNamespace>ComfySdk</RootNamespace>
     <Description>.NET SDK for ComfyUI Server and Comfy Cloud.</Description>
+    <PackageId>ComfySdk</PackageId>
+    <PackageTags>comfyui;dotnet;sdk</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>
