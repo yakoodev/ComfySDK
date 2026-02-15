@@ -4,4 +4,8 @@
     <RootNamespace>ComfySdk</RootNamespace>
     <Description>.NET SDK for ComfyUI Server and Comfy Cloud.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 </Project>

@@ -19,3 +19,13 @@
 ## Как проверить
 - В sample: искусственно оборвать WS (например, перезапустить сервер) и увидеть reconnect.
 - Запустить run и убедиться, что на успех приходит `Succeeded`.
+
+## Выполнено
+- `RunStreamAsync` расширен до нормализованного WS-потока с событиями:
+  - `Connected`, `Queued`, `Executing`, `Progress`, `Disconnected`, `Reconnected`, `Succeeded`.
+- Добавлен auto-reconnect с настраиваемыми параметрами:
+  - `EnableWsReconnect`, `WsMaxReconnectAttempts`, `WsReconnectBaseDelay`.
+- Добавлена привязка потока к `promptId` во всех событиях/логах.
+- Добавлен fallback до terminal state через HTTP-path (в scaffold режиме — `Succeeded` fallback).
+- Реализовано корректное `Cancellation`: стрим останавливается локально без auto-вызова `/interrupt`.
+- В тестовом раннере добавлены проверки reconnect/terminal и cancel-behavior.

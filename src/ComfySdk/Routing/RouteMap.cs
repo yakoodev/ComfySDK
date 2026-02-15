@@ -10,4 +10,5 @@ public sealed record RouteMap(
     string UploadMask = "/upload/mask",
     string Interrupt = "/interrupt",
     string Queue = "/queue",
+    string Status = "/queue",
     string WsPath = "/ws");

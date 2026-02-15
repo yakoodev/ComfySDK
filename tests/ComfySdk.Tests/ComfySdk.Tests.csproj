@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <AssemblyName>ComfySdk.Tests</AssemblyName>
     <RootNamespace>ComfySdk.Tests</RootNamespace>
     <Description>Unit test scaffolding for ComfySdk runtime.</Description>
