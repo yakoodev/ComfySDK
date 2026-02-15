@@ -1,0 +1,15 @@
+{
+  "10": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 1,
+      "cfg": 7.0
+    }
+  },
+  "20": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "input.png"
+    }
+  }
+}

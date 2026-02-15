@@ -1,0 +1,53 @@
+{
+  "settingsSchemaVersion": 1,
+  "parameters": [
+    {
+      "name": "seed",
+      "type": "long",
+      "selector": {
+        "class_type": "KSampler"
+      },
+      "path": "inputs.seed",
+      "required": false,
+      "default": 123456789,
+      "description": "Seed for sampler node."
+    },
+    {
+      "name": "cfg",
+      "type": "double",
+      "selector": {
+        "class_type": "KSampler"
+      },
+      "path": "inputs.cfg",
+      "required": false,
+      "default": 7.0,
+      "description": "Classifier free guidance."
+    },
+    {
+      "name": "input_image",
+      "type": "file",
+      "selector": {
+        "class_type": "LoadImage"
+      },
+      "path": "inputs.image",
+      "required": true,
+      "description": "Input image that will be uploaded and patched as server reference.",
+      "file": {
+        "conversion": "upload"
+      }
+    }
+  ],
+  "outputs": {
+    "mode": "first",
+    "types": [
+      "image"
+    ],
+    "download": "files",
+    "saveDir": "artifacts",
+    "fileName": "guid"
+  },
+  "diagnostics": {
+    "saveMaterializedWorkflow": true,
+    "directory": "artifacts/diagnostics"
+  }
+}

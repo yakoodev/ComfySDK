@@ -54,6 +54,11 @@ internal static class JsonPathSetter
                 throw new InvalidOperationException($"Path '{fullPath}' is invalid at leaf property '{token.PropertyName}'.");
             }
 
+            if (!obj.ContainsKey(token.PropertyName!))
+            {
+                throw new InvalidOperationException($"Path '{fullPath}' is invalid. Missing property '{token.PropertyName}'.");
+            }
+
             obj[token.PropertyName!] = valueClone;
             return;
         }
