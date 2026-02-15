@@ -21,3 +21,10 @@
 - Скомпилировать solution.
 - В sample коде создать 2 параллельных run и убедиться, что оба отрабатывают.
 - Проверить, что без настройки маршрутов работают дефолты для Server.
+
+## Выполнено
+- Реализован API-каркас runtime: `ComfyClient`, `ComfyClientOptions`, `RouteMap`, `IAuthProvider`, `RunHandle`, `RunEvent`, `RunResult`, `OutputArtifact`, `IFileResolver`, `IFileUploader`, `IDownloader`.
+- В `ComfyClient` добавлена поддержка `ILogger` (`Microsoft.Extensions.Logging`), оставлен прямой конструктор без DI.
+- Добавлена DI-регистрация через `AddComfyClient(...)` (`ComfySdk.DependencyInjection.ServiceCollectionExtensions`).
+- Реализованы `RunStreamAsync` (`IAsyncEnumerable<RunEvent>`) и `RunAsync` (возвращает `RunResult` с outputs).
+- Обновлён sample: параллельный запуск двух run (direct + DI) и вывод событий/результатов.

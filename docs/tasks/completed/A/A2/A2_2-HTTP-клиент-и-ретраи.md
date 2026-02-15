@@ -18,3 +18,13 @@
 ## Как проверить
 - Смоделировать 429 в тестах (fake handler) и проверить число попыток.
 - Смоделировать 400 и убедиться, что ретраев нет.
+
+## Выполнено
+- Добавлен HTTP transport `ComfyHttpClient` с retry policy (сеть/429/5xx + jittered backoff).
+- Добавлены раздельные таймауты в `ComfyClientOptions`: `DefaultTimeout`, `UploadTimeout`, `DownloadTimeout`.
+- Добавлены retry-настройки `ComfyRetryOptions`.
+- Реализован unified error handling через `ComfyException` (`route/status/requestId/promptId/bodySnippet`).
+- DI обновлён: `ComfyHttpClient` регистрируется через `IHttpClientFactory` (`AddHttpClient`).
+- В тестовом раннере добавлены проверки:
+  - `429` → есть ретраи и успех после повторов.
+  - `400` → без ретраев, выбрасывается `ComfyException` с полями.
