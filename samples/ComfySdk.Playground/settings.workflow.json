@@ -1,0 +1,29 @@
+{
+  "settingsSchemaVersion": 1,
+  "parameters": [
+    {
+      "name": "prompt",
+      "type": "string",
+      "selector": {
+        "class_type": "CLIPTextEncode"
+      },
+      "path": "inputs.text",
+      "required": true,
+      "description": "Prompt text."
+    },
+    {
+      "name": "seed",
+      "type": "long",
+      "selector": {
+        "class_type": "KSampler"
+      },
+      "path": "inputs.seed",
+      "required": false,
+      "default": 1234567829
+    }
+  ],
+  "diagnostics": {
+    "saveMaterializedWorkflow": true,
+    "directory": "artifacts/diagnostics"
+  }
+}

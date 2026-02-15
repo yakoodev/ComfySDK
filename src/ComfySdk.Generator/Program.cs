@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using ComfySdk.Exceptions;
 using ComfySdk.Files;
 using ComfySdk.Settings;
@@ -45,16 +46,9 @@ catch (Exception ex)
     return 5;
 }
 
-var name = Path.GetFileNameWithoutExtension(workflowPath)
-    .Replace("workflow.", string.Empty, StringComparison.OrdinalIgnoreCase)
-    .Replace("-", string.Empty, StringComparison.OrdinalIgnoreCase)
-    .Replace("_", string.Empty, StringComparison.OrdinalIgnoreCase);
-if (string.IsNullOrWhiteSpace(name))
-{
-    name = "Workflow";
-}
-
-var className = char.ToUpperInvariant(name[0]) + name[1..] + "Params";
+var workflowBaseName = Path.GetFileNameWithoutExtension(workflowPath);
+var classBaseName = ToPascalIdentifier(workflowBaseName);
+var className = classBaseName + "Workflow";
 var outputPath = Path.Combine(outDir, className + ".cs");
 var code = BuildCode(className, workflowPath, settingsPath, settingsSpec);
 
@@ -210,6 +204,34 @@ static string ToPascalCase(string name)
 
     return string.Concat(parts.Select(static part =>
         char.ToUpperInvariant(part[0]) + part[1..]));
+}
+
+static string ToPascalIdentifier(string fileNameWithoutExtension)
+{
+    if (string.IsNullOrWhiteSpace(fileNameWithoutExtension))
+    {
+        return "Workflow";
+    }
+
+    var tokens = Regex.Matches(fileNameWithoutExtension, "[A-Za-z0-9]+")
+        .Select(static m => m.Value)
+        .Where(static t => !string.IsNullOrWhiteSpace(t))
+        .ToArray();
+
+    if (tokens.Length == 0)
+    {
+        return "Workflow";
+    }
+
+    var candidate = string.Concat(tokens.Select(static token =>
+        char.ToUpperInvariant(token[0]) + token[1..]));
+
+    if (char.IsDigit(candidate[0]))
+    {
+        return "Workflow" + candidate;
+    }
+
+    return candidate;
 }
 
 static string EscapeForXml(string value)

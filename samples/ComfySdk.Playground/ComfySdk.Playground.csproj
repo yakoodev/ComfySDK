@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ComfySdk.Playground</AssemblyName>
+    <RootNamespace>ComfySdk.Playground</RootNamespace>
+    <Description>Manual playground for testing ComfySdk behavior.</Description>
+    <IsPackable>false</IsPackable>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ComfySdk\ComfySdk.csproj" />
+  </ItemGroup>
+
+  <Target Name="GenerateWorkflowParams" BeforeTargets="BeforeBuild">
+    <MakeDir Directories="$(MSBuildThisFileDirectory)Models" />
+    <Exec
+      Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)..\..\src\ComfySdk.Generator\ComfySdk.Generator.csproj&quot; -- --workflow &quot;$(MSBuildThisFileDirectory)Specs\Default\default.json&quot; --settings &quot;$(MSBuildThisFileDirectory)Specs\Default\settings.default.json&quot; --out &quot;$(MSBuildThisFileDirectory)Models&quot;" />
+  </Target>
+</Project>

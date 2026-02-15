@@ -1,0 +1,62 @@
+{
+  "settingsSchemaVersion": 1,
+  "parameters": [
+    {
+      "name": "positive_prompt",
+      "type": "string",
+      "selector": {
+        "nodeId": "6"
+      },
+      "path": "inputs.text",
+      "required": true,
+      "description": "Positive prompt for generation."
+    },
+    {
+      "name": "negative_prompt",
+      "type": "string",
+      "selector": {
+        "nodeId": "7"
+      },
+      "path": "inputs.text",
+      "required": false,
+      "default": "text, watermark",
+      "description": "Negative prompt."
+    },
+    {
+      "name": "seed",
+      "type": "long",
+      "selector": {
+        "class_type": "KSampler"
+      },
+      "path": "inputs.seed",
+      "required": false,
+      "default": 725769310524473,
+      "description": "Sampler seed."
+    },
+    {
+      "name": "steps",
+      "type": "int",
+      "selector": {
+        "class_type": "KSampler"
+      },
+      "path": "inputs.steps",
+      "required": false,
+      "default": 20,
+      "description": "Sampling steps."
+    },
+    {
+      "name": "cfg",
+      "type": "double",
+      "selector": {
+        "class_type": "KSampler"
+      },
+      "path": "inputs.cfg",
+      "required": false,
+      "default": 8.0,
+      "description": "CFG scale."
+    }
+  ],
+  "diagnostics": {
+    "saveMaterializedWorkflow": false
+  }
+}

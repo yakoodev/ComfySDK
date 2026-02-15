@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using ComfySdk.Http;
 using ComfySdk.Models;
 using ComfySdk.Options;
@@ -98,13 +99,14 @@ public class ComfyClient
     public async Task<string> SubmitAsync(string workflowJson, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workflowJson);
+        var payloadJson = BuildSubmitPayloadJson(workflowJson);
 
         using var response = await _httpClient.SendWithRetryAsync(
             requestFactory: () =>
             {
                 var request = new HttpRequestMessage(HttpMethod.Post, _options.BuildEndpoint(_options.RouteMap.SubmitPrompt))
                 {
-                    Content = new StringContent(workflowJson, Encoding.UTF8, "application/json"),
+                    Content = new StringContent(payloadJson, Encoding.UTF8, "application/json"),
                 };
                 return request;
             },
@@ -114,7 +116,15 @@ public class ComfyClient
             cancellationToken: cancellationToken);
 
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        var promptId = TryReadPromptId(body) ?? CreateRunHandle().PromptId;
+        var promptId = TryReadPromptId(body);
+        if (string.IsNullOrWhiteSpace(promptId))
+        {
+            throw new Exceptions.ComfyException(
+                message: "Submit response does not contain prompt_id.",
+                route: _options.RouteMap.SubmitPrompt,
+                bodySnippet: body.Length <= 512 ? body : body[..512]);
+        }
+
         _logger.LogInformation("Submit completed promptId={PromptId}", promptId);
         return promptId;
     }
@@ -124,18 +134,41 @@ public class ComfyClient
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
 
-        var route = _options.RouteMap.HistoryV2.TrimEnd('/') + "/" + promptId;
-        using var response = await _httpClient.SendWithRetryAsync(
-            () => new HttpRequestMessage(HttpMethod.Get, _options.BuildEndpoint(route)),
-            route,
-            promptId,
-            ComfyRequestKind.Default,
-            cancellationToken);
+        var v2Route = _options.RouteMap.HistoryV2.TrimEnd('/') + "/" + promptId;
+        try
+        {
+            var v2Json = await GetHistoryJsonAsync(v2Route, promptId, cancellationToken);
+            var v2Outputs = ParseOutputArtifactsFromHistory(promptId, v2Json);
+            if (v2Outputs.Count > 0)
+            {
+                _logger.LogInformation("History loaded via v2 promptId={PromptId} outputs={Count}", promptId, v2Outputs.Count);
+                return v2Outputs;
+            }
+        }
+        catch (Exceptions.ComfyException ex) when (ex.HttpStatus == 404)
+        {
+            _logger.LogDebug("History v2 route not found for promptId={PromptId}. Falling back to v1.", promptId);
+        }
 
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        var outputs = ParseOutputArtifactsFromHistory(promptId, json);
-        _logger.LogInformation("History loaded promptId={PromptId} outputs={Count}", promptId, outputs.Count);
-        return outputs;
+        var v1Route = _options.RouteMap.HistoryV1.TrimEnd('/') + "/" + promptId;
+        var v1Json = await GetHistoryJsonAsync(v1Route, promptId, cancellationToken);
+        var v1Outputs = ParseOutputArtifactsFromHistory(promptId, v1Json);
+        if (v1Outputs.Count > 0)
+        {
+            _logger.LogInformation("History loaded via v1 by-id promptId={PromptId} outputs={Count}", promptId, v1Outputs.Count);
+            return v1Outputs;
+        }
+
+        var v1AllRoute = _options.RouteMap.HistoryV1.TrimEnd('/');
+        var v1AllJson = await GetHistoryJsonAsync(v1AllRoute, promptId, cancellationToken);
+        var v1AllOutputs = ParseOutputArtifactsFromHistory(promptId, v1AllJson);
+        if (v1AllOutputs.Count > 0)
+        {
+            _logger.LogInformation("History loaded via v1-all exact promptId={PromptId} outputs={Count}", promptId, v1AllOutputs.Count);
+            return v1AllOutputs;
+        }
+
+        return [];
     }
 
     /// <summary>Downloads artifact bytes with redirect-following support.</summary>
@@ -269,12 +302,30 @@ public class ComfyClient
         }
 
         if (root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty("outputs", out var directOutputsObject) &&
+            directOutputsObject.ValueKind == JsonValueKind.Object)
+        {
+            MapOutputsObject(directOutputsObject, list);
+            return list;
+        }
+
+        if (root.ValueKind == JsonValueKind.Object &&
             root.TryGetProperty(promptId, out var promptNode) &&
             promptNode.ValueKind == JsonValueKind.Object &&
             promptNode.TryGetProperty("outputs", out var nestedOutputs) &&
             nestedOutputs.ValueKind == JsonValueKind.Array)
         {
             MapOutputsArray(nestedOutputs, list);
+            return list;
+        }
+
+        if (root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty(promptId, out var promptNodeObject) &&
+            promptNodeObject.ValueKind == JsonValueKind.Object &&
+            promptNodeObject.TryGetProperty("outputs", out var nodeOutputs) &&
+            nodeOutputs.ValueKind == JsonValueKind.Object)
+        {
+            MapOutputsObject(nodeOutputs, list);
             return list;
         }
 
@@ -300,6 +351,77 @@ public class ComfyClient
         }
     }
 
+    private void MapOutputsObject(JsonElement outputsObject, List<OutputArtifact> list)
+    {
+        foreach (var nodeEntry in outputsObject.EnumerateObject())
+        {
+            if (nodeEntry.Value.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            foreach (var artifactGroup in nodeEntry.Value.EnumerateObject())
+            {
+                if (artifactGroup.Value.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                var type = InferArtifactType(artifactGroup.Name);
+                foreach (var artifact in artifactGroup.Value.EnumerateArray())
+                {
+                    if (artifact.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    var name = artifact.TryGetProperty("filename", out var filenameEl)
+                        ? filenameEl.GetString() ?? $"{nodeEntry.Name}.{type}"
+                        : $"{nodeEntry.Name}.{type}";
+
+                    Uri? url = null;
+                    if (artifact.TryGetProperty("filename", out var filenameNode) &&
+                        filenameNode.GetString() is { Length: > 0 } filename)
+                    {
+                        var query = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["filename"] = filename
+                        };
+
+                        if (artifact.TryGetProperty("subfolder", out var subfolderNode) &&
+                            subfolderNode.GetString() is { Length: > 0 } subfolder)
+                        {
+                            query["subfolder"] = subfolder;
+                        }
+
+                        if (artifact.TryGetProperty("type", out var storageTypeNode) &&
+                            storageTypeNode.GetString() is { Length: > 0 } storageType)
+                        {
+                            query["type"] = storageType;
+                        }
+
+                        url = AppendQuery(_options.BuildEndpoint(_options.RouteMap.View), query);
+                    }
+
+                    list.Add(new OutputArtifact(name, type, Url: url));
+                }
+            }
+        }
+    }
+
+    private static string InferArtifactType(string groupName)
+    {
+        var lower = groupName.ToLowerInvariant();
+        return lower switch
+        {
+            "images" => "image",
+            "videos" => "video",
+            "audio" => "audio",
+            "audios" => "audio",
+            _ => lower.TrimEnd('s')
+        };
+    }
+
     private static string? TryReadPromptId(string json)
     {
         using var doc = JsonDocument.Parse(json);
@@ -310,6 +432,49 @@ public class ComfyClient
         }
 
         return null;
+    }
+
+    private async Task<string> GetHistoryJsonAsync(
+        string route,
+        string promptId,
+        CancellationToken cancellationToken)
+    {
+        using var response = await _httpClient.SendWithRetryAsync(
+            () => new HttpRequestMessage(HttpMethod.Get, _options.BuildEndpoint(route)),
+            route,
+            promptId,
+            ComfyRequestKind.Default,
+            cancellationToken);
+
+        return await response.Content.ReadAsStringAsync(cancellationToken);
+    }
+
+    private static string BuildSubmitPayloadJson(string workflowJson)
+    {
+        JsonNode parsed;
+        try
+        {
+            parsed = JsonNode.Parse(workflowJson)
+                ?? throw new InvalidOperationException("Workflow payload is empty JSON.");
+        }
+        catch (Exception ex)
+        {
+            throw new FormatException("Workflow JSON is invalid.", ex);
+        }
+
+        if (parsed is JsonObject root &&
+            root.TryGetPropertyValue("prompt", out var promptNode) &&
+            promptNode is not null)
+        {
+            return root.ToJsonString();
+        }
+
+        var wrapped = new JsonObject
+        {
+            ["prompt"] = parsed
+        };
+
+        return wrapped.ToJsonString();
     }
 
     private static Uri AppendQuery(Uri baseUri, IReadOnlyDictionary<string, string>? query)

@@ -3,6 +3,7 @@ obj/
 .vs/
 .templateengine/
 .dotnet/
+artifacts/
 
 *.user
 *.suo

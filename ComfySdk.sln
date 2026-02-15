@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComfySdk.Generator.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComfySdk.SmokeTests", "tests\ComfySdk.SmokeTests\ComfySdk.SmokeTests.csproj", "{047558BB-228D-42F8-A775-80E06021AA2E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComfySdk.Playground", "samples\ComfySdk.Playground\ComfySdk.Playground.csproj", "{9997EE06-FF2F-473A-A38C-D2349AF6CD00}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -103,6 +105,18 @@ Global
 		{047558BB-228D-42F8-A775-80E06021AA2E}.Release|x64.Build.0 = Release|Any CPU
 		{047558BB-228D-42F8-A775-80E06021AA2E}.Release|x86.ActiveCfg = Release|Any CPU
 		{047558BB-228D-42F8-A775-80E06021AA2E}.Release|x86.Build.0 = Release|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Debug|x64.Build.0 = Debug|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Debug|x86.Build.0 = Debug|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Release|x64.ActiveCfg = Release|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Release|x64.Build.0 = Release|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Release|x86.ActiveCfg = Release|Any CPU
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -114,5 +128,6 @@ Global
 		{85B404A7-B6F8-414E-8075-DA28EDEDD982} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{492AF097-6A2B-422E-8E31-519877A40E6D} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{047558BB-228D-42F8-A775-80E06021AA2E} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{9997EE06-FF2F-473A-A38C-D2349AF6CD00} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 	EndGlobalSection
 EndGlobal

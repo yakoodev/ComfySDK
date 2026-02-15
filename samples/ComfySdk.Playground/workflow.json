@@ -1,0 +1,15 @@
+{
+  "20": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "old prompt"
+    }
+  },
+  "30": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 1,
+      "cfg": 7.0
+    }
+  }
+}

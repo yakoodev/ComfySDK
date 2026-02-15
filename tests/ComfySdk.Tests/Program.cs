@@ -14,6 +14,7 @@ await RunWsReconnectAndTerminalTestAsync();
 await RunWsCancelStopsWithoutInterruptTestAsync();
 await RunDownloadRedirectTestAsync();
 await RunSubmitAndHistoryMappingTestAsync();
+await RunSubmitAndHistoryObjectMappingTestAsync();
 
 Console.WriteLine("ComfySdk.Tests: PASS");
 return 0;
@@ -234,6 +235,63 @@ static async Task RunSubmitAndHistoryMappingTestAsync()
     Assert(outputs.Count == 1, $"expected 1 output, got {outputs.Count}");
     Assert(outputs[0].Type == "image", $"expected image type, got {outputs[0].Type}");
     Assert(outputs[0].Url?.ToString().Contains("/view?filename=image_1.png", StringComparison.Ordinal) == true, "expected mapped output URL");
+}
+
+static async Task RunSubmitAndHistoryObjectMappingTestAsync()
+{
+    var submit = new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new StringContent("{\"prompt_id\":\"prompt-obj\"}"),
+    };
+
+    var history = new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new StringContent("""
+{
+  "prompt-obj": {
+    "outputs": {
+      "9": {
+        "images": [
+          {
+            "filename": "ComfyUI_00001_.png",
+            "subfolder": "",
+            "type": "output"
+          }
+        ]
+      }
+    }
+  }
+}
+"""),
+    };
+
+    var handler = new SequenceHandler(submit, history);
+    using var httpClient = new HttpClient(handler)
+    {
+        BaseAddress = new Uri("http://127.0.0.1:8188"),
+    };
+
+    var options = new ComfyClientOptions
+    {
+        BaseUrl = new Uri("http://127.0.0.1:8188"),
+        RouteMap = new ComfySdk.Routing.RouteMap(
+            SubmitPrompt: "/prompt",
+            HistoryV2: "/history_v2",
+            HistoryV1: "/history",
+            View: "/view"),
+    };
+
+    var transport = new ComfyHttpClient(httpClient, options, NullLogger<ComfyHttpClient>.Instance);
+    var client = new ComfyClient(options, transport, NullLogger<ComfyClient>.Instance);
+
+    var promptId = await client.SubmitAsync("{}", CancellationToken.None);
+    Assert(promptId == "prompt-obj", $"expected promptId prompt-obj, got {promptId}");
+
+    var outputs = await client.GetHistoryAsync(promptId, CancellationToken.None);
+    Assert(outputs.Count == 1, $"expected 1 output, got {outputs.Count}");
+    Assert(outputs[0].Type == "image", $"expected image type, got {outputs[0].Type}");
+    Assert(outputs[0].Url?.ToString().Contains("/view?", StringComparison.Ordinal) == true, "expected /view URL");
+    Assert(outputs[0].Url?.ToString().Contains("filename=ComfyUI_00001_.png", StringComparison.Ordinal) == true, "expected filename in URL");
 }
 
 static void AssertDoesNotContain(string text, string forbidden, string message)
