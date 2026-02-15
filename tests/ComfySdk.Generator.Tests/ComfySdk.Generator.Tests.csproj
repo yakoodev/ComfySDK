@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>ComfySdk.Generator.Tests</AssemblyName>
+    <RootNamespace>ComfySdk.Generator.Tests</RootNamespace>
+    <Description>Unit test scaffolding for ComfySdk.Generator.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>

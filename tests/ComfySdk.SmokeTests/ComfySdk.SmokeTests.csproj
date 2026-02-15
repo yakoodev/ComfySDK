@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>ComfySdk.SmokeTests</AssemblyName>
+    <RootNamespace>ComfySdk.SmokeTests</RootNamespace>
+    <Description>Smoke test scaffolding for ComfySdk materialization pipeline.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ComfySdk\ComfySdk.csproj" />
+  </ItemGroup>
+</Project>

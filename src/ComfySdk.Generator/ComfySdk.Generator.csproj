@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ComfySdk.Generator</AssemblyName>
+    <RootNamespace>ComfySdk.Generator</RootNamespace>
+    <Description>ComfySdk parameter class generator.</Description>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>comfysdk-gen</ToolCommandName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ComfySdk\ComfySdk.csproj" />
+  </ItemGroup>
+</Project>

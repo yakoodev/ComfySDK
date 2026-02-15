@@ -1,0 +1,10 @@
+﻿bin/
+obj/
+.vs/
+.templateengine/
+.dotnet/
+
+*.user
+*.suo
+*.nupkg
+*.snupkg

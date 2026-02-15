@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>ComfySdk</AssemblyName>
+    <RootNamespace>ComfySdk</RootNamespace>
+    <Description>.NET SDK for ComfyUI Server and Comfy Cloud.</Description>
+  </PropertyGroup>
+</Project>

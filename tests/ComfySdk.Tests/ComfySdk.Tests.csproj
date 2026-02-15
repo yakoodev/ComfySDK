@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>ComfySdk.Tests</AssemblyName>
+    <RootNamespace>ComfySdk.Tests</RootNamespace>
+    <Description>Unit test scaffolding for ComfySdk runtime.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ComfySdk\ComfySdk.csproj" />
+  </ItemGroup>
+</Project>

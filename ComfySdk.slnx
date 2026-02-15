@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/ComfySdk.Samples/ComfySdk.Samples.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/ComfySdk.Generator/ComfySdk.Generator.csproj" />
+    <Project Path="src/ComfySdk/ComfySdk.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ComfySdk.Generator.Tests/ComfySdk.Generator.Tests.csproj" />
+    <Project Path="tests/ComfySdk.SmokeTests/ComfySdk.SmokeTests.csproj" />
+    <Project Path="tests/ComfySdk.Tests/ComfySdk.Tests.csproj" />
+  </Folder>
+</Solution>

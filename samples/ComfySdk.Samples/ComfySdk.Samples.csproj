@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ComfySdk.Samples</AssemblyName>
+    <RootNamespace>ComfySdk.Samples</RootNamespace>
+    <Description>Samples for ComfySdk.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ComfySdk\ComfySdk.csproj" />
+  </ItemGroup>
+</Project>
