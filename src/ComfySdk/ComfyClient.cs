@@ -1,4 +1,7 @@
-﻿using ComfySdk.Models;
+﻿using ComfySdk.Abstractions;
+using ComfySdk.Auth;
+using ComfySdk.Diagnostics;
+using ComfySdk.Models;
 using ComfySdk.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -35,7 +38,8 @@ public class ComfyClient
         }
 
         var handle = CreateRunHandle();
-        _logger.LogInformation("Run stream started for PromptId={PromptId}", handle.PromptId);
+        var wsEndpoint = _options.BuildWsEndpoint();
+        _logger.LogInformation("Run stream started for PromptId={PromptId} on {WsEndpoint}", handle.PromptId, wsEndpoint);
 
         yield return new RunEvent(RunEventType.Connected, $"Connected for run {handle.PromptId}.");
         yield return new RunEvent(RunEventType.Queued, $"Queued run {handle.PromptId}.");
@@ -61,14 +65,21 @@ public class ComfyClient
         var handle = CreateRunHandle();
         _logger.LogInformation("Run started for PromptId={PromptId}", handle.PromptId);
 
+        var submitRequest = await BuildRequestAsync(
+            HttpMethod.Post,
+            _options.RouteMap.SubmitPrompt,
+            new Dictionary<string, string> { ["client_id"] = handle.PromptId, ["token"] = "runtime-token" },
+            cancellationToken);
+
+        _logger.LogInformation("Submit request prepared: {Request}", SecretMasker.FormatRequestForLog(submitRequest));
+
         await Task.Delay(100, cancellationToken);
-        var artifactUrl = BuildRouteUrl(_options.RouteMap.View);
         var outputs = new[]
         {
             new OutputArtifact(
                 Name: "preview.png",
                 Type: "image",
-                Url: artifactUrl),
+                Url: _options.BuildEndpoint(_options.RouteMap.View)),
         };
 
         var result = new RunResult(handle.PromptId, outputs);
@@ -84,13 +95,28 @@ public class ComfyClient
         return new RunHandle(Guid.NewGuid().ToString("N"));
     }
 
-    private Uri BuildRouteUrl(string route)
+    private async Task<HttpRequestMessage> BuildRequestAsync(
+        HttpMethod method,
+        string route,
+        IReadOnlyDictionary<string, string>? query,
+        CancellationToken cancellationToken)
     {
-        var prefix = _options.ApiPrefix.Trim('/');
-        var routePart = route.Trim('/');
-        var combined = string.IsNullOrWhiteSpace(prefix)
-            ? routePart
-            : $"{prefix}/{routePart}";
-        return new Uri(_options.BaseUrl, "/" + combined);
+        var uri = _options.BuildEndpoint(route);
+        if (query is { Count: > 0 })
+        {
+            uri = AppendQuery(uri, query);
+        }
+
+        var request = new HttpRequestMessage(method, uri);
+        var auth = _options.AuthProvider ?? AuthProviders.None();
+        await auth.ApplyAsync(request, cancellationToken);
+        return request;
+    }
+
+    private static Uri AppendQuery(Uri baseUri, IReadOnlyDictionary<string, string> query)
+    {
+        var encoded = query.Select(q => $"{Uri.EscapeDataString(q.Key)}={Uri.EscapeDataString(q.Value)}");
+        var separator = string.IsNullOrEmpty(baseUri.Query) ? "?" : "&";
+        return new Uri(baseUri + separator + string.Join("&", encoded));
     }
 }

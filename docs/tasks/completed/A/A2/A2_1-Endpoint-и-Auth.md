@@ -23,3 +23,11 @@
 ## Как проверить
 - Написать unit-тест на masking (строка лога не содержит токен).
 - В samples: показать Cloud config с `ApiPrefix` и Bearer.
+
+## Выполнено
+- Добавлены auth-провайдеры: `None`, `Bearer`, `ApiKeyHeader`, `Cookie` + фабрика `AuthProviders`.
+- Расширен `RouteMap` (`Status`, полный набор роутов), добавлен sugar через `ComfyClientOptions.BuildEndpoint(...)` и `BuildWsEndpoint()`.
+- В `ComfyClient` добавлено применение `IAuthProvider` к запросу и безопасное логирование через `SecretMasker`.
+- Реализовано masking секретов в query/header/cookie для логов.
+- Добавлен автономный unit-тест раннер `tests/ComfySdk.Tests/Program.cs` (проверяет, что токен не попадает в строку лога).
+- В `samples` добавлен Cloud сценарий (`ApiPrefix=/api` + `Bearer`) и параллельный запуск вместе с Server-конфигом.
