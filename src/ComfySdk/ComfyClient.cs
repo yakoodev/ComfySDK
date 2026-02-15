@@ -1,6 +1,4 @@
-﻿using ComfySdk.Abstractions;
-using ComfySdk.Auth;
-using ComfySdk.Diagnostics;
+﻿using ComfySdk.Http;
 using ComfySdk.Models;
 using ComfySdk.Options;
 using Microsoft.Extensions.Logging;
@@ -13,17 +11,31 @@ public class ComfyClient
 {
     private readonly ComfyClientOptions _options;
     private readonly ILogger<ComfyClient> _logger;
+    private readonly ComfyHttpClient _httpClient;
 
     /// <summary>Creates client with explicit options.</summary>
     public ComfyClient(ComfyClientOptions options)
-        : this(options, NullLogger<ComfyClient>.Instance)
+        : this(
+            options,
+            new ComfyHttpClient(new HttpClient(), options, NullLogger<ComfyHttpClient>.Instance),
+            NullLogger<ComfyClient>.Instance)
     {
     }
 
     /// <summary>Creates client with explicit options and logger.</summary>
     public ComfyClient(ComfyClientOptions options, ILogger<ComfyClient> logger)
+        : this(
+            options,
+            new ComfyHttpClient(new HttpClient(), options, NullLogger<ComfyHttpClient>.Instance),
+            logger)
+    {
+    }
+
+    /// <summary>Creates client with explicit options, transport and logger.</summary>
+    public ComfyClient(ComfyClientOptions options, ComfyHttpClient httpClient, ILogger<ComfyClient> logger)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -65,22 +77,17 @@ public class ComfyClient
         var handle = CreateRunHandle();
         _logger.LogInformation("Run started for PromptId={PromptId}", handle.PromptId);
 
-        var submitRequest = await BuildRequestAsync(
-            HttpMethod.Post,
-            _options.RouteMap.SubmitPrompt,
-            new Dictionary<string, string> { ["client_id"] = handle.PromptId, ["token"] = "runtime-token" },
-            cancellationToken);
-
-        _logger.LogInformation("Submit request prepared: {Request}", SecretMasker.FormatRequestForLog(submitRequest));
+        _ = _httpClient;
 
         await Task.Delay(100, cancellationToken);
-        var outputs = new[]
-        {
-            new OutputArtifact(
-                Name: "preview.png",
-                Type: "image",
-                Url: _options.BuildEndpoint(_options.RouteMap.View)),
-        };
+        var outputs =
+            new[]
+            {
+                new OutputArtifact(
+                    Name: "preview.png",
+                    Type: "image",
+                    Url: _options.BuildEndpoint(_options.RouteMap.View)),
+            };
 
         var result = new RunResult(handle.PromptId, outputs);
         _logger.LogInformation(
@@ -90,33 +97,8 @@ public class ComfyClient
         return result;
     }
 
-    private RunHandle CreateRunHandle()
+    private static RunHandle CreateRunHandle()
     {
         return new RunHandle(Guid.NewGuid().ToString("N"));
-    }
-
-    private async Task<HttpRequestMessage> BuildRequestAsync(
-        HttpMethod method,
-        string route,
-        IReadOnlyDictionary<string, string>? query,
-        CancellationToken cancellationToken)
-    {
-        var uri = _options.BuildEndpoint(route);
-        if (query is { Count: > 0 })
-        {
-            uri = AppendQuery(uri, query);
-        }
-
-        var request = new HttpRequestMessage(method, uri);
-        var auth = _options.AuthProvider ?? AuthProviders.None();
-        await auth.ApplyAsync(request, cancellationToken);
-        return request;
-    }
-
-    private static Uri AppendQuery(Uri baseUri, IReadOnlyDictionary<string, string> query)
-    {
-        var encoded = query.Select(q => $"{Uri.EscapeDataString(q.Key)}={Uri.EscapeDataString(q.Value)}");
-        var separator = string.IsNullOrEmpty(baseUri.Query) ? "?" : "&";
-        return new Uri(baseUri + separator + string.Join("&", encoded));
     }
 }

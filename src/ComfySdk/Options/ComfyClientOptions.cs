@@ -18,6 +18,18 @@ public sealed class ComfyClientOptions
     /// <summary>Optional authentication provider for outgoing requests.</summary>
     public IAuthProvider? AuthProvider { get; init; }
 
+    /// <summary>Default request timeout.</summary>
+    public TimeSpan DefaultTimeout { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>Upload-specific timeout.</summary>
+    public TimeSpan UploadTimeout { get; init; } = TimeSpan.FromMinutes(2);
+
+    /// <summary>Download-specific timeout.</summary>
+    public TimeSpan DownloadTimeout { get; init; } = TimeSpan.FromMinutes(2);
+
+    /// <summary>Retry settings for transient failures.</summary>
+    public ComfyRetryOptions Retry { get; init; } = new();
+
     /// <summary>Builds absolute endpoint URI using <see cref="ApiPrefix"/> and <see cref="RouteMap"/> values.</summary>
     public Uri BuildEndpoint(string route)
     {

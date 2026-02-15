@@ -1,4 +1,5 @@
-﻿using ComfySdk.Options;
+﻿using ComfySdk.Http;
+using ComfySdk.Options;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ComfySdk.DependencyInjection;
@@ -13,7 +14,15 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(options);
 
         services.AddSingleton(options);
-        services.AddSingleton<ComfyClient>();
+        services
+            .AddHttpClient<ComfyHttpClient>((sp, client) =>
+            {
+                var configured = sp.GetRequiredService<ComfyClientOptions>();
+                client.BaseAddress = configured.BaseUrl;
+                client.Timeout = Timeout.InfiniteTimeSpan;
+            });
+
+        services.AddTransient<ComfyClient>();
         return services;
     }
 }
