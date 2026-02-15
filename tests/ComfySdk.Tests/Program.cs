@@ -1,13 +1,17 @@
 ﻿using System.Net;
+using ComfySdk;
 using ComfySdk.Diagnostics;
 using ComfySdk.Exceptions;
 using ComfySdk.Http;
+using ComfySdk.Models;
 using ComfySdk.Options;
 using Microsoft.Extensions.Logging.Abstractions;
 
 await RunMaskingTestAsync();
 await RunRetry429TestAsync();
 await RunNoRetry400TestAsync();
+await RunWsReconnectAndTerminalTestAsync();
+await RunWsCancelStopsWithoutInterruptTestAsync();
 
 Console.WriteLine("ComfySdk.Tests: PASS");
 return 0;
@@ -112,6 +116,54 @@ static async Task RunNoRetry400TestAsync()
         Assert(ex.PromptId == "prompt-400", $"expected promptId 'prompt-400', got '{ex.PromptId}'");
         Assert(ex.BodySnippet?.Contains("bad-request-body", StringComparison.Ordinal) == true, "expected body snippet to include response body");
     }
+}
+
+static async Task RunWsReconnectAndTerminalTestAsync()
+{
+    var options = new ComfyClientOptions
+    {
+        BaseUrl = new Uri("http://localhost:8188"),
+        EnableWsReconnect = true,
+        WsMaxReconnectAttempts = 2,
+        WsReconnectBaseDelay = TimeSpan.FromMilliseconds(1),
+    };
+
+    var client = new ComfyClient(options);
+    var events = new List<RunEventType>();
+
+    await foreach (var runEvent in client.RunStreamAsync(new { Prompt = "cat" }))
+    {
+        events.Add(runEvent.Type);
+    }
+
+    Assert(events.Contains(RunEventType.Disconnected), "expected Disconnected event in stream");
+    Assert(events.Contains(RunEventType.Reconnected), "expected Reconnected event in stream");
+    var last = events[^1];
+    Assert(last is RunEventType.Succeeded or RunEventType.Failed, "expected terminal event in stream");
+}
+
+static async Task RunWsCancelStopsWithoutInterruptTestAsync()
+{
+    var options = new ComfyClientOptions
+    {
+        BaseUrl = new Uri("http://localhost:8188"),
+        EnableWsReconnect = true,
+        WsMaxReconnectAttempts = 2,
+        WsReconnectBaseDelay = TimeSpan.FromMilliseconds(10),
+    };
+
+    var client = new ComfyClient(options);
+    using var cts = new CancellationTokenSource();
+    cts.CancelAfter(20);
+
+    var events = new List<RunEventType>();
+    await foreach (var runEvent in client.RunStreamAsync(new { Prompt = "cat" }, cts.Token))
+    {
+        events.Add(runEvent.Type);
+    }
+
+    Assert(events.Count > 0, "expected at least one event before cancellation");
+    Assert(!events.Contains(RunEventType.Succeeded), "did not expect success terminal on canceled stream");
 }
 
 static void AssertDoesNotContain(string text, string forbidden, string message)

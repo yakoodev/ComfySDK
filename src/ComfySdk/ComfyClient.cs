@@ -50,20 +50,46 @@ public class ComfyClient
         }
 
         var handle = CreateRunHandle();
+        var promptId = handle.PromptId;
         var wsEndpoint = _options.BuildWsEndpoint();
-        _logger.LogInformation("Run stream started for PromptId={PromptId} on {WsEndpoint}", handle.PromptId, wsEndpoint);
+        _logger.LogInformation("Run stream started for PromptId={PromptId} on {WsEndpoint}", promptId, wsEndpoint);
 
-        yield return new RunEvent(RunEventType.Connected, $"Connected for run {handle.PromptId}.");
-        yield return new RunEvent(RunEventType.Queued, $"Queued run {handle.PromptId}.");
-        await Task.Delay(50, cancellationToken);
+        yield return new RunEvent(RunEventType.Connected, $"Connected for run {promptId}.");
+        yield return new RunEvent(RunEventType.Queued, $"Queued run {promptId}.");
+        if (!await WaitOrCancelAsync(promptId, TimeSpan.FromMilliseconds(40), cancellationToken))
+        {
+            yield break;
+        }
 
-        yield return new RunEvent(RunEventType.Executing, $"Executing run {handle.PromptId}.");
-        yield return new RunEvent(RunEventType.Progress, "Progress update.", ProgressPercent: 50);
-        await Task.Delay(50, cancellationToken);
+        yield return new RunEvent(RunEventType.Executing, $"Executing run {promptId}.");
+        yield return new RunEvent(RunEventType.Progress, "Progress update.", ProgressPercent: 40);
+        if (!await WaitOrCancelAsync(promptId, TimeSpan.FromMilliseconds(40), cancellationToken))
+        {
+            yield break;
+        }
+
+        // Simulated WS disconnect to validate reconnect flow in scaffold/runtime tests.
+        yield return new RunEvent(RunEventType.Disconnected, $"WS disconnected for run {promptId}.");
+
+        var reconnectAttempt = await TryReconnectAsync(promptId, cancellationToken);
+        if (reconnectAttempt is null)
+        {
+            var fallbackTerminal = await ResolveTerminalStateViaHttpFallbackAsync(promptId, cancellationToken);
+            yield return fallbackTerminal;
+            _logger.LogInformation("Run stream finished for PromptId={PromptId} via HTTP fallback", promptId);
+            yield break;
+        }
+
+        yield return new RunEvent(RunEventType.Reconnected, $"WS reconnected for run {promptId} (attempt {reconnectAttempt}).");
+        yield return new RunEvent(RunEventType.Progress, "Progress update after reconnect.", ProgressPercent: 90);
+        if (!await WaitOrCancelAsync(promptId, TimeSpan.FromMilliseconds(40), cancellationToken))
+        {
+            yield break;
+        }
 
         yield return new RunEvent(RunEventType.Progress, "Progress update.", ProgressPercent: 100);
-        yield return new RunEvent(RunEventType.Succeeded, $"Run {handle.PromptId} completed.");
-        _logger.LogInformation("Run stream finished for PromptId={PromptId}", handle.PromptId);
+        yield return new RunEvent(RunEventType.Succeeded, $"Run {promptId} completed.");
+        _logger.LogInformation("Run stream finished for PromptId={PromptId}", promptId);
     }
 
     /// <summary>Runs workflow and returns final outputs once terminal state is reached.</summary>
@@ -95,6 +121,56 @@ public class ComfyClient
             result.PromptId,
             result.Outputs.Count);
         return result;
+    }
+
+    private async Task<int?> TryReconnectAsync(string promptId, CancellationToken cancellationToken)
+    {
+        if (!_options.EnableWsReconnect || _options.WsMaxReconnectAttempts <= 0)
+        {
+            return null;
+        }
+
+        for (var attempt = 1; attempt <= _options.WsMaxReconnectAttempts; attempt++)
+        {
+            if (!await WaitOrCancelAsync(promptId, _options.WsReconnectBaseDelay, cancellationToken))
+            {
+                return null;
+            }
+
+            var reconnectSucceeded = attempt == 1;
+            if (reconnectSucceeded)
+            {
+                _logger.LogInformation(
+                    "WS reconnect succeeded for PromptId={PromptId} on attempt={Attempt}",
+                    promptId,
+                    attempt);
+                return attempt;
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<RunEvent> ResolveTerminalStateViaHttpFallbackAsync(string promptId, CancellationToken cancellationToken)
+    {
+        await Task.Delay(20, cancellationToken);
+        return new RunEvent(RunEventType.Succeeded, $"Run {promptId} resolved via HTTP fallback.");
+    }
+
+    private async Task<bool> WaitOrCancelAsync(string promptId, TimeSpan delay, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(delay, cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation(
+                "Run stream canceled for PromptId={PromptId}. WS closed, waiting stopped, no remote interrupt.",
+                promptId);
+            return false;
+        }
     }
 
     private static RunHandle CreateRunHandle()

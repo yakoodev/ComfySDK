@@ -30,6 +30,15 @@ public sealed class ComfyClientOptions
     /// <summary>Retry settings for transient failures.</summary>
     public ComfyRetryOptions Retry { get; init; } = new();
 
+    /// <summary>Enables automatic WS reconnect behavior.</summary>
+    public bool EnableWsReconnect { get; init; } = true;
+
+    /// <summary>Maximum reconnect attempts for WS stream.</summary>
+    public int WsMaxReconnectAttempts { get; init; } = 3;
+
+    /// <summary>Base delay between WS reconnect attempts.</summary>
+    public TimeSpan WsReconnectBaseDelay { get; init; } = TimeSpan.FromMilliseconds(200);
+
     /// <summary>Builds absolute endpoint URI using <see cref="ApiPrefix"/> and <see cref="RouteMap"/> values.</summary>
     public Uri BuildEndpoint(string route)
     {
