@@ -6,6 +6,9 @@ namespace ComfySdk.Options;
 /// <summary>Configuration options for <c>ComfyClient</c>.</summary>
 public sealed class ComfyClientOptions
 {
+    /// <summary>Target endpoint flavor used by SDK strategies.</summary>
+    public ComfyEndpointKind EndpointKind { get; init; } = ComfyEndpointKind.Server;
+
     /// <summary>Base URL of Comfy endpoint (Server or Cloud).</summary>
     public required Uri BaseUrl { get; init; }
 
