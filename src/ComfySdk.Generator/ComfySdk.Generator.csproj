@@ -4,11 +4,18 @@
     <AssemblyName>ComfySdk.Generator</AssemblyName>
     <RootNamespace>ComfySdk.Generator</RootNamespace>
     <Description>ComfySdk parameter class generator.</Description>
+    <PackageId>ComfySdk.Generator</PackageId>
+    <PackageTags>comfyui;dotnet;generator;tool</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>comfysdk-gen</ToolCommandName>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ComfySdk\ComfySdk.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

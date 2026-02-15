@@ -1,7 +1,7 @@
 ﻿namespace ComfySdk.Exceptions;
 
 /// <summary>Unified exception for Comfy HTTP/runtime failures.</summary>
-public sealed class ComfyException : Exception
+public class ComfyException : Exception
 {
     /// <summary>HTTP status code if available.</summary>
     public int? HttpStatus { get; }
@@ -17,6 +17,18 @@ public sealed class ComfyException : Exception
 
     /// <summary>Small response body excerpt for diagnostics.</summary>
     public string? BodySnippet { get; }
+
+    /// <summary>Creates Comfy exception.</summary>
+    public ComfyException(string message)
+        : this(message, route: "n/a")
+    {
+    }
+
+    /// <summary>Creates Comfy exception.</summary>
+    public ComfyException(string message, Exception innerException)
+        : this(message, route: "n/a", innerException: innerException)
+    {
+    }
 
     /// <summary>Creates Comfy exception.</summary>
     public ComfyException(
